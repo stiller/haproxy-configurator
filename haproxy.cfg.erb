@@ -1,0 +1,52 @@
+global
+	log /dev/log	local0
+	log /dev/log	local1 notice
+	chroot /var/lib/haproxy
+	user haproxy
+	group haproxy
+	daemon
+
+defaults
+	log	global
+	mode	http
+	option	httplog
+	option	dontlognull
+        timeout connect 9s
+        timeout client 60s
+        timeout server 30s
+        timeout check 5s
+	errorfile 400 /etc/haproxy/errors/400.http
+	errorfile 403 /etc/haproxy/errors/403.http
+	errorfile 408 /etc/haproxy/errors/408.http
+	errorfile 500 /etc/haproxy/errors/500.http
+	errorfile 502 /etc/haproxy/errors/502.http
+	errorfile 503 /etc/haproxy/errors/503.http
+	errorfile 504 /etc/haproxy/errors/504.http
+  stats   enable
+  stats   auth <%= @config[:statuser] %>:<%= @config[:statpassword] %>
+
+frontend proxy
+  bind *:80
+  mode http
+  acl is_v2 hdr_end(host) -i nolten.org
+<% @domains.each do |domain| %>
+  acl is_v2 hdr_end(host) -i <%= domain.gsub('www.','') %>
+<% end %>
+  use_backend v2 if is_v2
+  default_backend v3
+
+backend v2
+        mode    http
+        option httpchk HEAD / HTTP/1.0
+        option forwardfor
+        cookie LSW_WEB insert
+        option httpclose
+        server web01 <%= @config[:v2][:ip] %>:80 cookie LSW_WEB01 check
+
+backend v3
+        mode    http
+        option httpchk HEAD / HTTP/1.0
+        option forwardfor
+        cookie LSW_WEB insert
+        option httpclose
+        server web01 <%= @config[:v3][:ip] %>:80 cookie LSW_WEB01 check
