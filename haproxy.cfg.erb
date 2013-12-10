@@ -28,12 +28,11 @@ defaults
 frontend proxy
   bind *:80
   mode http
-  acl is_v2 hdr_end(host) -i nolten.org
 <% @domains.each do |domain| %>
-  acl is_v2 hdr_end(host) -i <%= domain.gsub('www.','') %>
+  acl is_v3 hdr_end(host) -i <%= domain['domain_name'].gsub('www.','') %>
 <% end %>
-  use_backend v2 if is_v2
-  default_backend v3
+  use_backend v3 if is_v3
+  default_backend v2
 
 backend v2
         mode    http
@@ -41,7 +40,7 @@ backend v2
         option forwardfor
         cookie LSW_WEB insert
         option httpclose
-        server web01 <%= @config[:v2][:ip] %>:80 cookie LSW_WEB01 check
+        server web01 <%= @config[:v2] %>:80 cookie LSW_WEB01 check
 
 backend v3
         mode    http
@@ -49,4 +48,4 @@ backend v3
         option forwardfor
         cookie LSW_WEB insert
         option httpclose
-        server web01 <%= @config[:v3][:ip] %>:80 cookie LSW_WEB01 check
+        server web01 <%= @config[:v3] %>:80 cookie LSW_WEB01 check
